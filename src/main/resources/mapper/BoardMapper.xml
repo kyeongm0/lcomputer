@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lcomputer.example.mapper.BoardMapper">
+	<select id="boardList" parameterType="Board" resultMap="userMap">
+		SELECT	@rownum:=@rownum-1 AS rownum,
+				ta.b_idx,
+				ta.b_title,
+				ta.b_content,
+				ta.b_date,
+				ta.b_hits,
+				tb.u_name,
+				tb.u_idx
+		FROM	lc_board ta
+		LEFT JOIN	lc_user tb
+		ON			ta.u_idx=tb.u_idx
+		INNER JOIN (SELECT @rownum:=(SELECT COUNT(*)-${pagination.pageNum}+1 FROM lc_board ta)) tc
+		ON			1=1
+		ORDER BY b_group DESC, b_order ASC
+		LIMIT ${pagination.pageNum},3
+	</select>
+	
+	<resultMap id="userMap" type="Board">
+		<id property="bIdx" column="b_idx"/>
+		<result property="bTitle" column="b_title"/>
+		<result property="bContent" column="b_content"/>
+		<result property="bDate" column="b_date"/>
+		<result property="bHits" column="b_hits"/>
+		<result property="rownum" column="rownum"/>
+		
+		<association property="user" javaType="User">
+			<id property="uIdx" column="u_idx"/>
+			<result property="uName" column="u_name"/>
+		</association>
+	</resultMap>
+	
+	<insert id="boardInsert" parameterType="Board">
+		INSERT INTO lc_board(
+			b_title,
+			b_content,
+			b_date,
+			b_hits,
+			b_group,
+			b_order,
+			b_depth,
+			u_idx
+		)
+			<selectKey keyProperty="bIdx" resultType="Integer">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+		VALUES (
+			#{bTitle},
+			#{bContent},
+			now(),
+			0,
+			0,
+			1,
+			0,
+			#{uIdx}
+		)
+	</insert>
+	
+	<update id="groupUpdate">
+		UPDATE lc_board SET
+			b_group=#{bIdx}
+		WHERE b_idx=#{bIdx}
+	</update>
+	
+	<select id="boardDetail" parameterType="Board" resultMap="uploadMap">
+		SELECT 	ta.b_idx,
+				ta.b_title,
+				ta.b_content,
+				ta.b_date,
+				ta.b_hits,
+				ta.u_idx,
+				tb.t_upload,
+				tb.t_fileName,
+				tb.t_idx
+		FROM	lc_board ta
+		LEFT JOIN	lc_upload tb
+		ON		ta.b_idx=tb.b_idx
+		WHERE	1=1
+		AND		ta.b_idx=#{bIdx}
+	</select>
+	<resultMap id="uploadMap" type="Board">
+		<id property="bIdx" column="b_idx"/>
+		<result property="bTitle" column="b_title"/>
+		<result property="bContent" column="b_content"/>
+		<result property="bDate" column="b_date"/>
+		<result property="bHits" column="b_hits"/>
+		<result property="uIdx" column="u_idx"/>
+		
+		<collection property="uploadList" ofType="Upload">
+			<id property="tIdx" column="t_idx"/>
+			<result property="tUpload" column="t_upload"/>
+			<result property="tFileName" column="t_fileName"/>
+		</collection>
+	</resultMap>
+	
+	<select id="boardEdit" resultType="Board">
+		SELECT 	b_idx as bIdx,
+				b_title as bTitle,
+				b_content as bContent,
+				b_date as bDate,
+				b_hits as bHits
+		FROM	lc_board
+		WHERE	1=1
+		AND		b_idx=#{bIdx}
+	</select>
+	
+	<update id="boardEditProcess">
+		UPDATE lc_board SET
+			b_title=#{bTitle},
+			b_content=#{bContent},
+			b_date=#{bDate},
+			b_hits=#{bHits}
+		WHERE b_idx=#{bIdx}
+	</update>
+	
+	<delete id="boardDelete">
+		DELETE FROM lc_board
+		WHERE b_idx=#{bIdx}
+	</delete>
+	
+	<update id="boardHitscount">
+		UPDATE lc_board SET
+			b_hits=b_hits+1
+		WHERE b_idx=#{bIdx}
+	</update>
+	
+	<select id="boardReply" resultType="Board">
+		SELECT 	b_idx as bIdx,
+				b_title as bTitle,
+				b_content as bContent,
+				b_date as bDate,
+				b_hits as bHits,
+				b_group as bGroup,
+				b_order as bOrder,
+				b_depth as bDepth
+		FROM	lc_board
+		WHERE	1=1
+		AND		b_idx=#{bIdx}
+	</select>
+	
+	<insert id="boardReplyProcess" parameterType="Board">
+		INSERT INTO lc_board(
+			b_title,
+			b_content,
+			b_date,
+			b_hits,
+			b_group,
+			b_order,
+			b_depth
+		)
+			<selectKey keyProperty="bIdx" resultType="Integer">
+			SELECT LAST_INSERT_ID()
+			</selectKey>
+		VALUES (
+			#{bTitle},
+			#{bContent},
+			now(),
+			0,
+			#{bGroup},
+			#{bOrder}+1,
+			#{bDepth}
+		)
+	</insert>
+	
+	<update id="orderUpdate">
+		UPDATE lc_board SET
+			b_order=b_order+1
+		WHERE b_group=#{bGroup} AND b_order>=#{bOrder} AND b_idx!=#{bIdx} AND b_idx!=#{bOrigin}
+	</update>
+	
+	<update id="depthUpdate">
+		UPDATE lc_board SET
+			b_depth=b_depth+1
+		WHERE b_idx=#{bIdx}
+	</update>
+	
+	<select id="boardCount" resultType="int">
+		SELECT 	count(*) as count
+		FROM	lc_board
+	</select>
+	
+	<select id="boardSearch" parameterType="Board" resultMap="userMap2">
+		SELECT	@rownum:=@rownum-1 AS rownum,
+				ta.b_idx,
+				ta.b_title,
+				ta.b_content,
+				ta.b_date,
+				ta.b_hits,
+				tb.u_name,
+				tb.u_idx
+		FROM	lc_board ta
+		LEFT JOIN	lc_user tb
+		ON			ta.u_idx=tb.u_idx
+		INNER JOIN (SELECT @rownum:=(SELECT COUNT(*)-${pagination.pageNum}+1 FROM lc_board ta)) tc
+		ON			1=1
+		where 	1=1
+		<choose>
+			<when test='pagination.search.bSearch == "1"'>
+				AND b_title LIKE #{pagination.search.bKeyword}
+			</when>
+			
+			<when test='pagination.search.bSearch == "2"'>
+				AND ( b_title LIKE #{pagination.search.bKeyword} || b_content LIKE #{pagination.search.bKeyword} )
+			</when>
+			
+			<when test='pagination.search.bSearch == "3"'>
+				AND u_name LIKE #{pagination.search.bKeyword}
+			</when>
+		</choose>
+		ORDER BY b_group DESC, b_order ASC
+		LIMIT ${pagination.pageNum},3
+	</select>
+	
+	<resultMap id="userMap2" type="Board">
+		<id property="bIdx" column="b_idx"/>
+		<result property="bTitle" column="b_title"/>
+		<result property="bContent" column="b_content"/>
+		<result property="bDate" column="b_date"/>
+		<result property="bHits" column="b_hits"/>
+		<result property="rownum" column="rownum"/>
+		
+		<association property="user" javaType="User">
+			<id property="uIdx" column="u_idx"/>
+			<result property="uName" column="u_name"/>
+		</association>
+	</resultMap>
+	
+	<select id="searchCount" resultType="int">
+		SELECT	COUNT(*) as count
+		FROM	lc_board ta
+		LEFT JOIN	lc_user tb
+		ON			ta.u_idx=tb.u_idx
+		where 	1=1
+		<choose>
+			<when test='bSearch == "1"'>
+				AND b_title LIKE #{bKeyword}
+			</when>
+			
+			<when test='bSearch == "2"'>
+				AND ( b_title LIKE #{bKeyword} || b_content LIKE #{bKeyword} )
+			</when>
+			
+			<when test='bSearch == "3"'>
+				AND u_name LIKE #{bKeyword}
+			</when>
+		</choose>
+	</select>
+	
+	<select id="boardInfo" parameterType="Board" resultType="Board">
+		SELECT	u_idx as uIdx,
+				b_idx as bIdx
+		FROM	lc_board
+		WHERE	1=1
+		AND		b_idx=#{bIdx}
+	</select>
+	
+</mapper>

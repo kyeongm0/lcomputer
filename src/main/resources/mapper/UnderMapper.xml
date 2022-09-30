@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lcomputer.example.mapper.UnderMapper">
+	<insert id="underInsert" parameterType="Under">
+		INSERT INTO lc_under(
+			u_idx,
+			d_content,
+			d_date,
+			b_idx,
+			d_group,
+			d_order,
+			d_depth
+		)
+			<selectKey keyProperty="dIdx" resultType="Integer">
+			SELECT LAST_INSERT_ID()
+			</selectKey>
+		VALUES (
+			#{uIdx},
+			#{dContent},
+			now(),
+			#{bIdx},
+			0,
+			1,
+			0
+		)
+	</insert>
+	
+	<update id="underGroupUpdate">
+		UPDATE lc_under SET
+			d_group=#{dIdx}
+		WHERE d_idx=#{dIdx}
+	</update>
+	
+	<select id="underList" parameterType="Under" resultMap="userMap">
+		SELECT		@rownum:=@rownum-1 AS rownum,
+					ta.d_content,
+					ta.d_date,
+					tb.u_idx,
+					tb.u_name,
+					ta.d_group,
+					ta.d_order,
+					ta.d_depth,
+					ta.d_idx
+		FROM		lc_under ta
+		LEFT JOIN	lc_user tb
+		ON			ta.u_idx=tb.u_idx
+		INNER JOIN	(SELECT @rownum:=(SELECT COUNT(*)-${pagination.pageNum}+1 FROM lc_under ta)) tc
+		ON			1=1
+		WHERE		ta.b_idx=#{bIdx}
+		ORDER BY 	d_group DESC, d_order ASC
+		LIMIT		${pagination.pageNum},3
+	</select>
+	
+	<resultMap id="userMap" type="Under">
+		<id property="dIdx" column="d_idx"/>
+		<result property="dContent" column="d_content"/>
+		<result property="dDate" column="d_date"/>
+		<result property="rownum" column="rownum"/>
+		<result property="dGroup" column="d_group"/>
+		<result property="dOrder" column="d_order"/>
+		<result property="dDepth" column="d_depth"/>
+		
+		<association property="user" javaType="User">
+			<id property="uIdx" column="u_idx"/>
+			<result property="uName" column="u_name"/>
+		</association>
+	</resultMap>
+	
+	<select id="underCount" resultType="int">
+		SELECT		COUNT(*) as count
+		FROM		lc_under
+		WHERE		b_idx=#{bIdx}
+	</select>
+	
+	<update id="underOrderUpdate">
+		UPDATE lc_under SET
+			d_order=d_order+1
+		WHERE d_group=#{dGroup} AND d_order>=#{dOrder} AND d_idx!=#{dIdx} AND d_idx!=#{dOrigin}
+	</update>
+	
+	<update id="underDepthUpdate">
+		UPDATE lc_under SET
+			d_depth=d_depth+1
+		WHERE d_idx=#{dIdx}
+	</update>
+	
+	<insert id="underComment" parameterType="Under">
+		INSERT INTO lc_under(
+			u_idx,
+			d_content,
+			d_date,
+			b_idx,
+			d_group,
+			d_order,
+			d_depth
+		)
+			<selectKey keyProperty="dIdx" resultType="Integer">
+			SELECT LAST_INSERT_ID()
+			</selectKey>
+		VALUES (
+			#{uIdx},
+			#{dContent},
+			now(),
+			#{bIdx},
+			#{dGroup},
+			#{dOrder},
+			#{dDepth}
+		)
+	</insert>
+	
+	<select id="underEdit" resultType="Under">
+		UPDATE lc_under SET
+			d_content=#{dContent}
+		WHERE d_idx=#{dIdx}
+	</select>
+	
+	<delete id="underDelete">
+		DELETE FROM lc_under
+		WHERE d_idx=#{dIdx}
+	</delete>
+	
+	
+</mapper>

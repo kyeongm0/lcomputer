@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lcomputer.example.mapper.UploadMapper">
+	<insert id="uploadInsert" parameterType="Upload">
+		INSERT INTO lc_upload(
+			b_idx,
+			t_upload,
+			t_fileName
+		)
+		VALUES (
+			#{bIdx},
+			#{tUpload},
+			#{tFileName}
+		)
+	</insert>
+	
+	<select id="uploadRead" parameterType="Upload" resultType="Upload">
+		SELECT 		t_upload AS tUpload,
+					t_filename AS tFileName
+		FROM		lc_upload
+		WHERE		b_idx=#{bIdx}
+	</select>
+	
+	<delete id="uploadDelete">
+		DELETE FROM lc_upload
+		WHERE b_idx=#{bIdx}
+	</delete>
+</mapper>

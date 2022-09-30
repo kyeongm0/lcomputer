@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lcomputer.example.mapper.UserMapper">
+
+	<select id="readAuthorities" parameterType="String" resultType="org.springframework.security.core.authority.SimpleGrantedAuthority">
+		SELECT	u_auth
+		FROM	author
+		WHERE	1=1
+		AND		u_id=#{username}
+	</select>
+
+	<select id="readUser" parameterType="String" resultType="User">
+		SELECT	u_id as username,
+				u_pw as password,
+				u_name as uName,
+				u_idx as uIdx,
+				u_isAccountNonExpired as isAccountNonExpired,
+				u_isAccountNonLocked as isAccountNonLocked,
+				u_isCredentialsNonExpired as isCredentialsNonExpired,
+				u_isEnabled as isEnabled
+		FROM	lc_user
+		WHERE	1=1
+		AND		u_id=#{username}
+	</select>
+	
+	<select id="userList" parameterType="User" resultType="User">
+		SELECT	@rownum:=@rownum-1 AS rownum,
+				u_id as username,
+				u_name as uName,
+				u_idx as uIdx,
+				u_date as uDate
+		FROM	lc_user ta
+		INNER JOIN (SELECT @rownum:=(SELECT COUNT(*)-${pagination.PageNum}+1 FROM lc_user ta)) tb
+		ON			1=1
+		LIMIT ${pagination.PageNum},3
+	</select>
+	
+	
+	<insert id="createUser" parameterType="User">
+		INSERT INTO lc_user(
+			u_id,
+			u_pw,
+			u_name,
+			u_date,
+			u_isAccountNonExpired,
+			u_isAccountNonLocked,
+			u_isCredentialsNonExpired,
+			u_isEnabled,
+			u_level
+		)
+			<selectKey keyProperty="uIdx" resultType="String">
+				SELECT LAST_INSERT_ID()
+			</selectKey>
+		VALUES (
+			#{username},
+			#{password},
+			#{uName},
+			now(),
+			#{isAccountNonExpired},
+			#{isAccountNonLocked},
+			#{isCredentialsNonExpired},
+			#{isEnabled},
+			1
+		)
+			
+	</insert>
+
+	<insert id="createAuthority" parameterType="org.springframework.security.core.GrantedAuthority">
+		INSERT INTO author (
+			u_id,
+			u_auth,
+			u_idx
+		) 
+		VALUES
+			<foreach item="authority" index="index" collection="authorities" separator=",">
+				(#{username}, #{authority.role}, #{uIdx})
+			</foreach>
+			ON DUPLICATE KEY 
+			UPDATE
+				u_id=#{username}
+	</insert>
+	
+	<select id="userDetail" resultType="User">
+		SELECT 	u_id as username,
+				u_name as uName,
+				u_date as uDate,
+				u_idx as uIdx,
+				u_level as uLevel
+		FROM	lc_user
+		WHERE	1=1
+		AND		u_idx=#{uIdx}
+	</select>
+	
+	<select id="userEdit" resultType="User">
+		SELECT  u_idx as uIdx,
+				u_id as username,
+				u_pw as password,
+				u_name as uName,
+				u_date as uDate
+		FROM	lc_user
+		WHERE	1=1
+		AND		u_idx=#{uIdx}
+	</select>
+	
+	<update id="userEditProcess">
+		UPDATE lc_user SET
+			u_id=#{username},
+			u_pw=#{password},
+			u_name=#{uName},
+			u_date=#{uDate}
+		WHERE u_idx=#{uIdx}
+	</update>
+	
+	<delete id="userDelete">
+		DELETE FROM lc_user
+		WHERE u_idx=#{uIdx}
+	</delete>
+	
+	<select id="userCount" resultType="int">
+		SELECT 	count(*) as count
+		FROM	lc_user
+	</select>
+	
+	<update id="authorLevel">
+		UPDATE author SET
+			<choose>
+				<when test="uLevel == 1">
+					u_auth='ROLE_ADMIN'
+				</when>
+				
+				<when test="uLevel == 2">
+					u_auth='ROLE_USER'
+				</when>
+			</choose>
+		WHERE		u_idx=#{uIdx}
+	</update>
+	
+	<update id="userLevel">
+		UPDATE lc_user SET
+			<choose>
+				<when test="uLevel == 1">
+					u_level=2
+				</when>
+				
+				<when test="uLevel == 2">
+					u_level=1
+				</when>
+			</choose>
+		WHERE	u_idx=#{uIdx}
+	</update>
+	
+	<select id="userInfo" parameterType="User" resultType="User">
+		SELECT	u_idx as uIdx,
+				u_level as uLevel
+		FROM	lc_user
+		WHERE	1=1
+		AND		u_idx=#{uIdx}
+	</select>
+	
+</mapper>
